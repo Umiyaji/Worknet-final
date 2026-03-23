@@ -1,0 +1,95 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { axiosInstance } from "../../lib/axios.js";
+import { toast } from "react-hot-toast";
+import { Loader } from "lucide-react";
+import GoogleLoginComp from "../GoogleLoginComp.jsx";
+
+const SignUpForm = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const queryClient = useQueryClient();
+
+  const { mutate: signUpMutation, isPending } = useMutation({
+    mutationFn: async (data) => {
+      const res = await axiosInstance.post("/auth/signup", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Account created successfully");
+      queryClient.invalidateQueries({ queryKey: ["authUser"] });
+    },
+    onError: (err) => {
+      toast.error(err.response.data.message || "Something went wrong");
+    },
+  });
+
+  const handleSignUp = (e) => {
+    e.preventDefault();
+    signUpMutation({ name, username, email, password });
+  };
+
+  return (
+    <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+      <input
+        type="text"
+        placeholder="Full name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
+        required
+      />
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
+        required
+      />
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password (6+ characters)"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
+        required
+      />
+
+      <button
+        type="submit"
+        disabled={isPending}
+        className="btn btn-primary w-full cursor-pointer border rounded-md p-2 bg-primary text-white hover:bg-primary-dark font-semibold flex justify-center items-center gap-2"
+      >
+        {isPending ? (
+          <>
+            <Loader className="size-5 animate-spin" />
+            <span>Signing Up...</span>
+          </>
+        ) : (
+          "Agree & Join"
+        )}
+      </button>
+
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t border-gray-300"></div>
+        <span className="text-sm text-gray-500">Or</span>
+        <div className="flex-1 border-t border-gray-300"></div>
+      </div>
+
+      <GoogleLoginComp />
+    </form>
+  );
+};
+export default SignUpForm;
