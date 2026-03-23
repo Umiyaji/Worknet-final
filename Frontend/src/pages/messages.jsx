@@ -33,13 +33,14 @@ const Messages = () => {
   const fileInputRef = useRef(null);
   const activeUserIdRef = useRef(null);
 
-  const { data: conversations = [], isLoading: isConversationsLoading } = useQuery({
-    queryKey: ["conversations"],
-    queryFn: async () => {
-      const res = await axiosInstance.get("/messages/conversations");
-      return res.data;
-    },
-  });
+  const { data: conversations = [], isLoading: isConversationsLoading } =
+    useQuery({
+      queryKey: ["conversations"],
+      queryFn: async () => {
+        const res = await axiosInstance.get("/messages/conversations");
+        return res.data;
+      },
+    });
 
   const filteredConversations = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
@@ -62,7 +63,10 @@ const Messages = () => {
   }, [conversations, searchTerm]);
 
   const activeUserId =
-    selectedUserId || filteredConversations[0]?.user?._id || conversations[0]?.user?._id || null;
+    selectedUserId ||
+    filteredConversations[0]?.user?._id ||
+    conversations[0]?.user?._id ||
+    null;
 
   React.useEffect(() => {
     activeUserIdRef.current = activeUserId;
@@ -115,7 +119,7 @@ const Messages = () => {
         }
 
         const alreadyExists = previous.messages.some(
-          (existingMessage) => existingMessage._id === message._id
+          (existingMessage) => existingMessage._id === message._id,
         );
 
         if (alreadyExists) {
@@ -209,14 +213,15 @@ const Messages = () => {
           }
 
           return {
-            user: senderId === authUser._id ? message.recipient : message.sender,
+            user:
+              senderId === authUser._id ? message.recipient : message.sender,
             messages: [message],
             onlineUsers: [],
           };
         }
 
         const alreadyExists = previous.messages.some(
-          (existingMessage) => existingMessage._id === message._id
+          (existingMessage) => existingMessage._id === message._id,
         );
 
         if (alreadyExists) {
@@ -230,7 +235,10 @@ const Messages = () => {
       });
 
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      if (otherUserId === activeUserIdRef.current && senderId !== authUser._id) {
+      if (
+        otherUserId === activeUserIdRef.current &&
+        senderId !== authUser._id
+      ) {
         markConversationRead(otherUserId);
       }
     };
@@ -245,7 +253,9 @@ const Messages = () => {
 
         return {
           ...previous,
-          messages: previous.messages.filter((message) => message._id !== messageId),
+          messages: previous.messages.filter(
+            (message) => message._id !== messageId,
+          ),
         };
       });
 
@@ -288,7 +298,9 @@ const Messages = () => {
 
         return {
           ...previous,
-          messages: previous.messages.filter((message) => message._id !== messageId),
+          messages: previous.messages.filter(
+            (message) => message._id !== messageId,
+          ),
         };
       });
 
@@ -336,20 +348,25 @@ const Messages = () => {
 
               <div className="h-[calc(100%-73px)] overflow-y-auto px-2 py-2">
                 {isConversationsLoading ? (
-                  <div className="px-4 py-6 text-sm text-gray-500">Loading conversations...</div>
+                  <div className="px-4 py-6 text-sm text-gray-500">
+                    Loading conversations...
+                  </div>
                 ) : filteredConversations.length ? (
                   filteredConversations.map((conversation) => (
                     <div key={conversation._id} className="mb-2">
                       <Conversation
                         conversation={conversation}
                         isActive={conversation.user?._id === activeUserId}
-                        onClick={() => setSelectedUserId(conversation.user?._id)}
+                        onClick={() =>
+                          setSelectedUserId(conversation.user?._id)
+                        }
                       />
                     </div>
                   ))
                 ) : (
                   <div className="px-4 py-6 text-sm text-gray-500">
-                    No conversations yet. Connect with someone and send your first message.
+                    No conversations yet. Connect with someone and send your
+                    first message.
                   </div>
                 )}
               </div>
@@ -390,7 +407,9 @@ const Messages = () => {
                     Pick a conversation from the left to start messaging.
                   </div>
                 ) : isMessagesLoading ? (
-                  <div className="text-sm text-gray-500">Loading messages...</div>
+                  <div className="text-sm text-gray-500">
+                    Loading messages...
+                  </div>
                 ) : (
                   <>
                     <div className="flex flex-col items-center text-center">
@@ -404,7 +423,8 @@ const Messages = () => {
                           {activeUser?.name}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {activeUser?.headline || `@${activeUser?.username || ""}`}
+                          {activeUser?.headline ||
+                            `@${activeUser?.username || ""}`}
                         </p>
                       </div>
                     </div>
@@ -420,7 +440,9 @@ const Messages = () => {
                             <div className="max-w-[75%] group">
                               {message.text ? (
                                 <div className="bg-blue-600 text-white rounded-2xl rounded-br-sm px-4 py-3 shadow-sm">
-                                  <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                                  <p className="text-sm whitespace-pre-wrap">
+                                    {message.text}
+                                  </p>
                                 </div>
                               ) : null}
                               {message.image ? (
@@ -433,12 +455,17 @@ const Messages = () => {
                                 </div>
                               ) : null}
                               <p className="text-xs text-gray-400 mt-1 text-right">
-                                {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                                {formatDistanceToNow(
+                                  new Date(message.createdAt),
+                                  { addSuffix: true },
+                                )}
                               </p>
                               <div className="mt-1 flex justify-end">
                                 <button
                                   type="button"
-                                  onClick={() => deleteMessageMutation.mutate(message._id)}
+                                  onClick={() =>
+                                    deleteMessageMutation.mutate(message._id)
+                                  }
                                   disabled={deleteMessageMutation.isPending}
                                   className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
                                 >
@@ -449,7 +476,10 @@ const Messages = () => {
                             </div>
                           </div>
                         ) : (
-                          <div key={message._id} className="flex items-start gap-3">
+                          <div
+                            key={message._id}
+                            className="flex items-start gap-3"
+                          >
                             <img
                               className="w-10 h-10 rounded-full object-cover"
                               src={activeUser?.profilePicture || fallbackAvatar}
@@ -476,7 +506,10 @@ const Messages = () => {
                                 </div>
                               ) : null}
                               <p className="text-xs text-gray-400 mt-1">
-                                {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                                {formatDistanceToNow(
+                                  new Date(message.createdAt),
+                                  { addSuffix: true },
+                                )}
                               </p>
                             </div>
                           </div>
