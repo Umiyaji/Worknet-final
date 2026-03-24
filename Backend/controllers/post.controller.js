@@ -204,6 +204,7 @@ export const createAutomatedJobPost = async (req, res) => {
 			lastDateToApply,
 			source = "google-sheet",
 			sourceRowId,
+			content: providedContent,
 		} = req.body;
 
 		const skillsRequired = normalizeSkills(rawSkillsRequired);
@@ -258,10 +259,13 @@ export const createAutomatedJobPost = async (req, res) => {
 			sourceRowId: String(sourceRowId).trim(),
 		});
 
+		const trimmedProvidedContent =
+			typeof providedContent === "string" ? providedContent.trim() : "";
+
 		const newPost = new Post({
 			author: companyUser._id,
 			postType: "job",
-			content: buildJobPostContent(jobDetails),
+			content: trimmedProvidedContent || buildJobPostContent(jobDetails),
 			jobDetails,
 		});
 

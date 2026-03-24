@@ -1,0 +1,14 @@
+You are a professional job post writer.
+
+Your task is to read job vacancy data from below and create a social-media-ready hiring post.
+
+Company Name: TCS
+Job Role: Software Engineering
+Total Openings: 3
+Experience Required: Fresher, 1-2 years
+Job Type: In Office
+Office Location: Gandhinagar
+Skills Required: MERN, HTML, CSS
+Salary Range: 5 LPA - 9 LPA
+Last Date to Apply: 01-04-026
+Contact Email: hr@tcs.com

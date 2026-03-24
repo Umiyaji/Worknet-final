@@ -1,0 +1,564 @@
+{
+  "name": "Google Sheet Gemini Job Post Creator",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Form Responses 1"
+        },
+        "event": "rowAdded"
+      },
+      "id": "google-sheets-trigger",
+      "name": "Google Sheets Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "processed-empty",
+              "leftValue": "={{$json.processed}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-unprocessed",
+      "name": "If Unprocessed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nconst clean = (v) => String(v ?? '').trim();\n\nconst skillsArray = clean(row.skillsRequired)\n  .split(',')\n  .map(skill => skill.trim())\n  .filter(Boolean);\n\nreturn [\n  {\n    json: {\n      rowNumber: row.rowNumber || row.Row || row['Row Number'] || row.row || '',\n      companyUsername: clean(row.companyUsername).toLowerCase(),\n      companyName: clean(row.companyName),\n      role: clean(row.role),\n      totalOpenings: Number(row.totalOpenings || 0),\n      experienceRequired: clean(row.experienceRequired),\n      workMode: clean(row.workMode),\n      officeLocation: clean(row.officeLocation),\n      skillsRequired: skillsArray,\n      skillsRequiredText: skillsArray.join(', '),\n      lastDateToApply: clean(row.lastDateToApply),\n      source: 'google-sheet-gemini',\n      sourceRowId: clean(row.sourceRowId || row.rowNumber || row.Row || Date.now()),\n      originalRow: row\n    }\n  }\n];"
+      },
+      "id": "code-normalize",
+      "name": "Normalize Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a professional hiring post for a company social platform.\n\nUse only the facts below.\n\nCompany: {{$json.companyName}}\nRole: {{$json.role}}\nOpenings: {{$json.totalOpenings}}\nExperience Required: {{$json.experienceRequired}}\nWork Mode: {{$json.workMode}}\nOffice Location: {{$json.officeLocation}}\nSkills Required: {{$json.skillsRequiredText}}\nLast Date to Apply: {{$json.lastDateToApply}}\n\nRules:\n- Do not invent any facts\n- Do not add salary, benefits, perks, or company culture\n- Do not change numbers, names, skills, or dates\n- Keep it concise and professional\n- Write as if posted by the company account\n- Output only the final post text\n- Keep it under 120 words",
+        "messages": {
+          "messageValues": []
+        }
+      },
+      "id": "gemini-prompt",
+      "name": "Generate Post With Gemini",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-pro"
+      },
+      "id": "gemini-model",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        960,
+        500
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Gemini Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "rowNumber",
+              "name": "rowNumber",
+              "value": "={{$node[\"Normalize Row\"].json[\"rowNumber\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "companyUsername",
+              "name": "companyUsername",
+              "value": "={{$node[\"Normalize Row\"].json[\"companyUsername\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "companyName",
+              "name": "companyName",
+              "value": "={{$node[\"Normalize Row\"].json[\"companyName\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "role",
+              "name": "role",
+              "value": "={{$node[\"Normalize Row\"].json[\"role\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "totalOpenings",
+              "name": "totalOpenings",
+              "value": "={{$node[\"Normalize Row\"].json[\"totalOpenings\"]}}",
+              "type": "number"
+            },
+            {
+              "id": "experienceRequired",
+              "name": "experienceRequired",
+              "value": "={{$node[\"Normalize Row\"].json[\"experienceRequired\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "workMode",
+              "name": "workMode",
+              "value": "={{$node[\"Normalize Row\"].json[\"workMode\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "officeLocation",
+              "name": "officeLocation",
+              "value": "={{$node[\"Normalize Row\"].json[\"officeLocation\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "skillsRequired",
+              "name": "skillsRequired",
+              "value": "={{$node[\"Normalize Row\"].json[\"skillsRequired\"]}}",
+              "type": "array"
+            },
+            {
+              "id": "lastDateToApply",
+              "name": "lastDateToApply",
+              "value": "={{$node[\"Normalize Row\"].json[\"lastDateToApply\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "source",
+              "name": "source",
+              "value": "={{$node[\"Normalize Row\"].json[\"source\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "sourceRowId",
+              "name": "sourceRowId",
+              "value": "={{$node[\"Normalize Row\"].json[\"sourceRowId\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "geminiPostText",
+              "name": "geminiPostText",
+              "value": "={{$json.text || $json.response || $json.output || $json.content}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "keepOnlySet": true
+        }
+      },
+      "id": "set-payload",
+      "name": "Prepare Backend Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1210,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://localhost:5173/api/v1/posts/automation/create-job-post",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x_automation_key",
+              "value": "hello_worknet@123"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"companyUsername\": $json.companyUsername,\n  \"companyName\": $json.companyName,\n  \"role\": $json.role,\n  \"totalOpenings\": $json.totalOpenings,\n  \"experienceRequired\": $json.experienceRequired,\n  \"workMode\": $json.workMode,\n  \"officeLocation\": $json.officeLocation,\n  \"skillsRequired\": $json.skillsRequired,\n  \"lastDateToApply\": $json.lastDateToApply,\n  \"source\": $json.source,\n  \"sourceRowId\": $json.sourceRowId,\n  \"content\": $json.geminiPostText\n}",
+        "options": {}
+      },
+      "id": "http-backend",
+      "name": "Create Post In Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "backend-success",
+              "leftValue": "={{$json.error}}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-success",
+      "name": "If Backend Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1710,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Form Responses 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "processed": "yes",
+            "processedAt": "={{$now}}",
+            "apiStatus": "success",
+            "errorMessage": ""
+          },
+          "matchingColumns": [
+            "sourceRowId"
+          ],
+          "schema": [
+            {
+              "id": "sourceRowId",
+              "displayName": "sourceRowId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "processed",
+              "displayName": "processed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "processedAt",
+              "displayName": "processedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "apiStatus",
+              "displayName": "apiStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "errorMessage",
+              "displayName": "errorMessage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "matchingColumns": [
+          "sourceRowId"
+        ],
+        "valueInputMode": "USER_ENTERED"
+      },
+      "id": "sheet-success",
+      "name": "Mark Sheet Success",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1960,
+        220
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Form Responses 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "processed": "no",
+            "processedAt": "={{$now}}",
+            "apiStatus": "failed",
+            "errorMessage": "={{$json.error?.message || $json.message || 'Unknown error'}}"
+          },
+          "matchingColumns": [
+            "sourceRowId"
+          ],
+          "schema": [
+            {
+              "id": "sourceRowId",
+              "displayName": "sourceRowId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "processed",
+              "displayName": "processed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "processedAt",
+              "displayName": "processedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "apiStatus",
+              "displayName": "apiStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            },
+            {
+              "id": "errorMessage",
+              "displayName": "errorMessage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "matchingColumns": [
+          "sourceRowId"
+        ],
+        "valueInputMode": "USER_ENTERED"
+      },
+      "id": "sheet-failed",
+      "name": "Mark Sheet Failed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1960,
+        380
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "If Unprocessed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Unprocessed": {
+      "main": [
+        [
+          {
+            "node": "Normalize Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Normalize Row": {
+      "main": [
+        [
+          {
+            "node": "Generate Post With Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Post With Gemini",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Post With Gemini": {
+      "main": [
+        [
+          {
+            "node": "Prepare Backend Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Backend Payload": {
+      "main": [
+        [
+          {
+            "node": "Create Post In Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Post In Backend": {
+      "main": [
+        [
+          {
+            "node": "If Backend Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Backend Success": {
+      "main": [
+        [
+          {
+            "node": "Mark Sheet Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Sheet Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+}
