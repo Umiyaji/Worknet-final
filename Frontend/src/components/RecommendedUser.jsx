@@ -7,6 +7,15 @@ import { Check, Clock, UserCheck, UserPlus, X } from "lucide-react";
 const RecommendedUser = ({ user, headlineWidth = "max-w-[150px]" }) => {
 	const queryClient = useQueryClient();
 
+	const refreshConnectionData = () => {
+		queryClient.invalidateQueries({ queryKey: ["authUser"] });
+		queryClient.invalidateQueries({ queryKey: ["connections"] });
+		queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
+		queryClient.invalidateQueries({ queryKey: ["recommendedUsers"] });
+		queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+		queryClient.invalidateQueries({ queryKey: ["connectionStatus"] });
+	};
+
 	const { data: connectionStatus, isLoading } = useQuery({
 		queryKey: ["connectionStatus", user._id],
 		queryFn: () => axiosInstance.get(`/connections/status/${user._id}`),
@@ -16,7 +25,7 @@ const RecommendedUser = ({ user, headlineWidth = "max-w-[150px]" }) => {
 		mutationFn: (userId) => axiosInstance.post(`/connections/request/${userId}`),
 		onSuccess: () => {
 			toast.success("Connection request sent successfully");
-			queryClient.invalidateQueries({ queryKey: ["connectionStatus", user._id] });
+			refreshConnectionData();
 		},
 		onError: (error) => {
 			toast.error(error.response?.data?.error || "An error occurred");
@@ -27,7 +36,7 @@ const RecommendedUser = ({ user, headlineWidth = "max-w-[150px]" }) => {
 		mutationFn: (requestId) => axiosInstance.put(`/connections/accept/${requestId}`),
 		onSuccess: () => {
 			toast.success("Connection request accepted");
-			queryClient.invalidateQueries({ queryKey: ["connectionStatus", user._id] });
+			refreshConnectionData();
 		},
 		onError: (error) => {
 			toast.error(error.response?.data?.error || "An error occurred");
@@ -38,7 +47,7 @@ const RecommendedUser = ({ user, headlineWidth = "max-w-[150px]" }) => {
 		mutationFn: (requestId) => axiosInstance.put(`/connections/reject/${requestId}`),
 		onSuccess: () => {
 			toast.success("Connection request rejected");
-			queryClient.invalidateQueries({ queryKey: ["connectionStatus", user._id] });
+			refreshConnectionData();
 		},
 		onError: (error) => {
 			toast.error(error.response?.data?.error || "An error occurred");

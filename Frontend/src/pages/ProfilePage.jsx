@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "../lib/axios";
 
@@ -121,6 +121,10 @@ const ProfilePage = () => {
   const isOwnProfile = authUser.username === userProfile.username;
   const userData = isOwnProfile ? authUser : userProfile;
   const postsToDisplay = showAllPosts ? userPosts : userPosts?.slice(0, 8);
+
+  if (userProfile.role === "recruiter") {
+    return <Navigate to={`/company/${userProfile.username}`} replace />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto pb-4">

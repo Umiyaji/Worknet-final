@@ -12,6 +12,7 @@ import {
   Users,
   SquarePlus,
   X,
+  Building2,
 } from "lucide-react";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
@@ -329,6 +330,24 @@ const Navbar = () => {
                           </span>
                         )}
                       </Link>
+
+                      <Link
+                        to="/jobs"
+                        className="text-neutral flex flex-col items-center relative"
+                      >
+                        <WorkOutlineIcon size={20} />
+                        <span className="text-xs hidden md:block">Jobs</span>
+                      </Link>
+
+                      {authUser?.role === "recruiter" && (
+                        <Link
+                          to="/recruiter/dashboard"
+                          className="text-neutral flex flex-col items-center relative"
+                        >
+                          <Building2 size={20} />
+                          <span className="text-xs hidden md:block">Recruiter</span>
+                        </Link>
+                      )}
                     </div>
 
                     {/* {<Link
@@ -373,6 +392,16 @@ const Navbar = () => {
                             <User size={16} className="mr-2" />
                             Profile
                           </Link>
+                          {authUser?.role === "recruiter" && (
+                            <Link
+                              to="/recruiter/dashboard"
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-200"
+                            >
+                              <Building2 size={16} className="mr-2" />
+                              Recruiter Dashboard
+                            </Link>
+                          )}
                           <button
                             // onClick={() => logout()}
                             onClick={() => {

@@ -6,11 +6,20 @@ import { Link } from "react-router-dom";
 const FriendRequest = ({ request }) => {
 	const queryClient = useQueryClient();
 
+	const refreshConnectionData = () => {
+		queryClient.invalidateQueries({ queryKey: ["authUser"] });
+		queryClient.invalidateQueries({ queryKey: ["connections"] });
+		queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
+		queryClient.invalidateQueries({ queryKey: ["recommendedUsers"] });
+		queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+		queryClient.invalidateQueries({ queryKey: ["connectionStatus"] });
+	};
+
 	const { mutate: acceptConnectionRequest } = useMutation({
 		mutationFn: (requestId) => axiosInstance.put(`/connections/accept/${requestId}`),
 		onSuccess: () => {
 			toast.success("Connection request accepted");
-			queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
+			refreshConnectionData();
 		},
 		onError: (error) => {
 			toast.error(error?.response?.data?.error || "Failed to accept request");
@@ -21,7 +30,7 @@ const FriendRequest = ({ request }) => {
 		mutationFn: (requestId) => axiosInstance.put(`/connections/reject/${requestId}`),
 		onSuccess: () => {
 			toast.success("Connection request rejected");
-			queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
+			refreshConnectionData();
 		},
 		onError: (error) => {
 			toast.error(error?.response?.data?.error || "Failed to reject request");

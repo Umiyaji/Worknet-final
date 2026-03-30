@@ -2,9 +2,25 @@ import { formatDistanceToNow } from "date-fns";
 
 const fallbackAvatar = "https://i.sstatic.net/CpC9A.png";
 
+const getRelativeTime = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return formatDistanceToNow(date, { addSuffix: true });
+};
+
 const Conversation = ({ conversation, isActive, onClick }) => {
   const lastMessage = conversation?.lastMessage;
   const preview = lastMessage?.text || (lastMessage?.image ? "Sent an image" : "Start the conversation");
+  const conversationTime = lastMessage?.createdAt
+    ? getRelativeTime(lastMessage.createdAt)
+    : "";
 
   return (
     <button
@@ -27,9 +43,7 @@ const Conversation = ({ conversation, isActive, onClick }) => {
             {conversation?.user?.name}
           </p>
           <span className="shrink-0 text-xs text-gray-400">
-            {conversation?.updatedAt
-              ? formatDistanceToNow(new Date(conversation.updatedAt), { addSuffix: true })
-              : ""}
+            {conversationTime}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">

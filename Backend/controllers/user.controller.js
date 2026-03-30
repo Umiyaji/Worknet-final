@@ -3,6 +3,9 @@ import cloudinary from "../lib/cloudinary.js";
 import fs from "fs/promises";
 import path from "path";
 
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const CURRENT_TOKENS = new Set(["present", "current", "ongoing", "now", "till date", "today"]);
+
 const deleteLocalResumeIfExists = async (resumeUrl) => {
 	if (!resumeUrl || !resumeUrl.includes("/uploads/resumes/")) {
 		return;
@@ -21,6 +24,214 @@ const deleteLocalResumeIfExists = async (resumeUrl) => {
 			console.error("Error deleting local resume file:", error);
 		}
 	}
+};
+
+const parseGeminiText = (data) =>
+	data?.candidates?.[0]?.content?.parts
+		?.map((part) => part.text)
+		.filter(Boolean)
+		.join("\n")
+		.trim() || "";
+
+const extractJsonFromText = (text) => {
+	if (!text) {
+		return null;
+	}
+
+	const cleaned = text
+		.replace(/^```json\s*/i, "")
+		.replace(/^```\s*/i, "")
+		.replace(/\s*```$/i, "")
+		.trim();
+
+	try {
+		return JSON.parse(cleaned);
+	} catch (_error) {
+		const firstBrace = cleaned.indexOf("{");
+		const lastBrace = cleaned.lastIndexOf("}");
+		if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+			return null;
+		}
+
+		try {
+			return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+		} catch (_nestedError) {
+			return null;
+		}
+	}
+};
+
+const normalizeString = (value) => (typeof value === "string" ? value.trim() : "");
+
+const normalizeSkills = (skills) => {
+	if (!Array.isArray(skills)) {
+		return [];
+	}
+
+	const unique = new Set();
+	for (const skill of skills) {
+		const cleaned = normalizeString(skill);
+		if (cleaned) {
+			unique.add(cleaned);
+		}
+	}
+	return Array.from(unique);
+};
+
+const parseResumeDate = (value) => {
+	const normalized = normalizeString(value);
+	if (!normalized) {
+		return null;
+	}
+
+	if (CURRENT_TOKENS.has(normalized.toLowerCase())) {
+		return null;
+	}
+
+	const yearOnly = normalized.match(/^(\d{4})$/);
+	if (yearOnly) {
+		const date = new Date(`${yearOnly[1]}-01-01`);
+		return Number.isNaN(date.getTime()) ? null : date;
+	}
+
+	const date = new Date(normalized);
+	return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseResumeYear = (value) => {
+	if (typeof value === "number" && Number.isFinite(value)) {
+		return Math.trunc(value);
+	}
+
+	const normalized = normalizeString(value);
+	if (!normalized) {
+		return null;
+	}
+
+	const match = normalized.match(/\b(19|20)\d{2}\b/);
+	if (!match) {
+		return null;
+	}
+	return Number(match[0]);
+};
+
+const normalizeExperience = (experience) => {
+	if (!Array.isArray(experience)) {
+		return [];
+	}
+
+	return experience
+		.map((item) => ({
+			title: normalizeString(item?.title),
+			company: normalizeString(item?.company),
+			startDate: parseResumeDate(item?.startDate),
+			endDate: parseResumeDate(item?.endDate),
+			description: normalizeString(item?.description),
+		}))
+		.filter((item) => item.title || item.company || item.startDate || item.endDate || item.description);
+};
+
+const normalizeEducation = (education) => {
+	if (!Array.isArray(education)) {
+		return [];
+	}
+
+	return education
+		.map((item) => ({
+			school: normalizeString(item?.school),
+			fieldOfStudy: normalizeString(item?.fieldOfStudy),
+			startYear: parseResumeYear(item?.startYear),
+			endYear: parseResumeYear(item?.endYear),
+		}))
+		.filter((item) => item.school || item.fieldOfStudy || item.startYear || item.endYear);
+};
+
+const getResumeExtractionPrompt = () => `
+Extract resume information and return strict JSON only.
+
+Output format:
+{
+  "about": "short professional summary in 2-4 lines",
+  "skills": ["skill1", "skill2"],
+  "experience": [
+    {
+      "title": "Job title",
+      "company": "Company name",
+      "startDate": "YYYY-MM-DD or YYYY or empty string",
+      "endDate": "YYYY-MM-DD or YYYY or empty string or Present",
+      "description": "short role summary"
+    }
+  ],
+  "education": [
+    {
+      "school": "School/College",
+      "fieldOfStudy": "Degree/Field",
+      "startYear": "YYYY or empty string",
+      "endYear": "YYYY or empty string"
+    }
+  ]
+}
+
+Rules:
+- Return valid JSON only.
+- If a field is missing in resume, use empty string or empty array.
+- Keep skills concise and deduplicated.
+- Do not invent details.
+`.trim();
+
+const extractProfileDataFromResume = async (filePath, mimetype) => {
+	if (!process.env.GEMINI_API_KEY) {
+		return null;
+	}
+
+	const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+	const fileBuffer = await fs.readFile(filePath);
+
+	const response = await fetch(
+		`${GEMINI_API_URL}/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				contents: [
+					{
+						parts: [
+							{ text: getResumeExtractionPrompt() },
+							{
+								inline_data: {
+									mime_type: mimetype,
+									data: fileBuffer.toString("base64"),
+								},
+							},
+						],
+					},
+				],
+				generationConfig: {
+					responseMimeType: "application/json",
+				},
+			}),
+		}
+	);
+
+	const data = await response.json();
+	if (!response.ok) {
+		throw new Error(data?.error?.message || "Failed to extract resume data");
+	}
+
+	const outputText = parseGeminiText(data);
+	const parsed = extractJsonFromText(outputText);
+	if (!parsed) {
+		throw new Error("Failed to parse resume extraction response");
+	}
+
+	return {
+		about: normalizeString(parsed.about),
+		skills: normalizeSkills(parsed.skills),
+		experience: normalizeExperience(parsed.experience),
+		education: normalizeEducation(parsed.education),
+	};
 };
 
 
@@ -80,6 +291,15 @@ export const updateProfile = async (req, res) => {
 			"skills",
 			"experience",
 			"education",
+			"companyName",
+			"companyWebsite",
+			"companySize",
+			"industry",
+			"companyLocation",
+			"companyLogo",
+			"companyBanner",
+			"aboutCompany",
+			"HRName",
 		];
 
 		const updatedData = {};
@@ -133,9 +353,40 @@ export const uploadResume = async (req, res) => {
 
 		const resumeUrl = `${req.protocol}://${req.get("host")}/uploads/resumes/${req.file.filename}`;
 		user.resume = resumeUrl;
+
+		let extractionApplied = false;
+		try {
+			const extracted = await extractProfileDataFromResume(req.file.path, req.file.mimetype);
+			if (extracted) {
+				if (extracted.about) {
+					user.about = extracted.about;
+				}
+				if (extracted.skills.length) {
+					user.skills = extracted.skills;
+				}
+				if (extracted.experience.length) {
+					user.experience = extracted.experience;
+				}
+				if (extracted.education.length) {
+					user.education = extracted.education;
+				}
+				extractionApplied = Boolean(
+					extracted.about ||
+						extracted.skills.length ||
+						extracted.experience.length ||
+						extracted.education.length
+				);
+			}
+		} catch (aiError) {
+			console.error("Resume AI extraction failed:", aiError);
+		}
+
 		await user.save();
 
-		res.json(user);
+		res.json({
+			...user.toObject(),
+			resumeExtractionApplied: extractionApplied,
+		});
 	} catch (error) {
 		console.error("Error uploading resume:", error);
 		res.status(500).json({ message: "Server error" });

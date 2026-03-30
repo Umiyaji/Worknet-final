@@ -14,6 +14,21 @@ import SuggestionsPage from "./pages/SuggestionsPage";
 import PostCreateMobile from "./pages/PostCreateMobile";
 import Resume from "./pages/Resume";
 import Messages from "./pages/messages";
+import RecruiterSignUpPage from "./pages/auth/RecruiterSignUpPage";
+import RecruiterDashboardPage from "./pages/RecruiterDashboardPage";
+import RecruiterJobsPage from "./pages/RecruiterJobsPage";
+import RecruiterJobFormPage from "./pages/RecruiterJobFormPage";
+import RecruiterApplicantsPage from "./pages/RecruiterApplicantsPage";
+import RecruiterExcelUploadPage from "./pages/RecruiterExcelUploadPage";
+import JobsListingPage from "./pages/JobsListingPage";
+import JobDetailPage from "./pages/JobDetailPage";
+import RecruiterProfilePage from "./pages/RecruiterProfilePage";
+
+const RecruiterRoute = ({ authUser, children }) => {
+  if (!authUser) return <Navigate to="/login" />;
+  if (authUser.role !== "recruiter") return <Navigate to="/" />;
+  return children;
+};
 
 function App() {
   const { data: authUser, isLoading } = useQuery({
@@ -49,6 +64,10 @@ function App() {
           element={!authUser ? <LoginPage /> : <Navigate to={"/"} />}
         />
         <Route
+          path="/signup/recruiter"
+          element={!authUser ? <RecruiterSignUpPage /> : <Navigate to={"/"} />}
+        />
+        <Route
           path="/create-post"
           element={authUser ? <PostCreateMobile /> : <Navigate to={"/login"} />}
         />
@@ -70,6 +89,74 @@ function App() {
         <Route
           path="/messages"
           element={authUser ? <Messages /> : <Navigate to={"/login"} />}
+        />
+        <Route
+          path="/jobs"
+          element={authUser ? <JobsListingPage /> : <Navigate to={"/login"} />}
+        />
+        <Route
+          path="/jobs/:jobId"
+          element={authUser ? <JobDetailPage /> : <Navigate to={"/login"} />}
+        />
+        <Route
+          path="/company/:username"
+          element={authUser ? <RecruiterProfilePage /> : <Navigate to={"/login"} />}
+        />
+        <Route
+          path="/recruiter/dashboard"
+          element={
+            <RecruiterRoute authUser={authUser}>
+              <RecruiterDashboardPage />
+            </RecruiterRoute>
+          }
+        />
+        <Route
+          path="/recruiter/jobs"
+          element={
+            <RecruiterRoute authUser={authUser}>
+              <RecruiterJobsPage />
+            </RecruiterRoute>
+          }
+        />
+        <Route
+          path="/recruiter/jobs/new"
+          element={
+            <RecruiterRoute authUser={authUser}>
+              <RecruiterJobFormPage />
+            </RecruiterRoute>
+          }
+        />
+        <Route
+          path="/recruiter/jobs/:jobId/edit"
+          element={
+            <RecruiterRoute authUser={authUser}>
+              <RecruiterJobFormPage />
+            </RecruiterRoute>
+          }
+        />
+        <Route
+          path="/recruiter/jobs/:jobId/applicants"
+          element={
+            <RecruiterRoute authUser={authUser}>
+              <RecruiterApplicantsPage />
+            </RecruiterRoute>
+          }
+        />
+        <Route
+          path="/recruiter/applicants"
+          element={
+            <RecruiterRoute authUser={authUser}>
+              <RecruiterApplicantsPage />
+            </RecruiterRoute>
+          }
+        />
+        <Route
+          path="/recruiter/jobs/upload-excel"
+          element={
+            <RecruiterRoute authUser={authUser}>
+              <RecruiterExcelUploadPage />
+            </RecruiterRoute>
+          }
         />
         <Route
           path="/network"

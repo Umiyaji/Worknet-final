@@ -9,6 +9,11 @@ const userSchema = new mongoose.Schema(
 		username: { type: String, required: true, unique: true },
 		email: { type: String, required: true, unique: true },
 		password: { type: String, required: true },
+		role: {
+			type: String,
+			enum: ["user", "recruiter"],
+			default: "user",
+		},
 		profilePicture: {
 			type: String,
 			default: "",
@@ -37,6 +42,49 @@ const userSchema = new mongoose.Schema(
 		resume: {
 			type: String,
 			default: "",
+		},
+		companyName: {
+			type: String,
+			default: "",
+			trim: true,
+		},
+		companyWebsite: {
+			type: String,
+			default: "",
+			trim: true,
+		},
+		companySize: {
+			type: String,
+			default: "",
+			trim: true,
+		},
+		industry: {
+			type: String,
+			default: "",
+			trim: true,
+		},
+		companyLocation: {
+			type: String,
+			default: "",
+			trim: true,
+		},
+		companyLogo: {
+			type: String,
+			default: "",
+		},
+		companyBanner: {
+			type: String,
+			default: "",
+		},
+		aboutCompany: {
+			type: String,
+			default: "",
+			trim: true,
+		},
+		HRName: {
+			type: String,
+			default: "",
+			trim: true,
 		},
 		experience: [
 			{

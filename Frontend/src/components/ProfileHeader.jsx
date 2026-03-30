@@ -27,6 +27,18 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
 
   const authUser = queryClient.getQueryData(["authUser"]);
 
+  const refreshConnectionData = () => {
+    queryClient.invalidateQueries({ queryKey: ["authUser"] });
+    queryClient.invalidateQueries({ queryKey: ["connections"] });
+    queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
+    queryClient.invalidateQueries({ queryKey: ["recommendedUsers"] });
+    queryClient.invalidateQueries({ queryKey: ["connectionStatus", userData._id] });
+    queryClient.invalidateQueries({ queryKey: ["userProfile", userData.username] });
+    if (authUser?.username) {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", authUser.username] });
+    }
+  };
+
   // Connection Status Query
   const { data: connectionStatus, refetch: refetchConnectionStatus } = useQuery(
     {
@@ -36,9 +48,10 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
     },
   );
 
-  const isConnected = userData.connections.some(
-    (connection) => connection === authUser?._id,
-  );
+  const isConnected = userData.connections.some((connection) => {
+    if (!connection) return false;
+    return (connection._id || connection).toString() === authUser?._id?.toString();
+  });
 
   // Connection Mutations
   const { mutate: sendConnectionRequest } = useMutation({
@@ -47,7 +60,7 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
     onSuccess: () => {
       toast.success("Connection request sent");
       refetchConnectionStatus();
-      queryClient.invalidateQueries(["connectionRequests"]);
+      refreshConnectionData();
     },
     onError: (error) =>
       toast.error(error.response?.data?.message || "An error occurred"),
@@ -59,7 +72,7 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
     onSuccess: () => {
       toast.success("Connection request accepted");
       refetchConnectionStatus();
-      queryClient.invalidateQueries(["connectionRequests"]);
+      refreshConnectionData();
     },
     onError: (error) =>
       toast.error(error.response?.data?.message || "An error occurred"),
@@ -71,7 +84,7 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
     onSuccess: () => {
       toast.success("Connection request rejected");
       refetchConnectionStatus();
-      queryClient.invalidateQueries(["connectionRequests"]);
+      refreshConnectionData();
     },
     onError: (error) =>
       toast.error(error.response?.data?.message || "An error occurred"),
@@ -82,7 +95,7 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
     onSuccess: () => {
       toast.success("Connection removed");
       refetchConnectionStatus();
-      queryClient.invalidateQueries(["connectionRequests"]);
+      refreshConnectionData();
     },
     onError: (error) =>
       toast.error(error.response?.data?.message || "An error occurred"),
@@ -157,7 +170,11 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
       }));
       queryClient.invalidateQueries(["authUser"]);
       queryClient.invalidateQueries(["userProfile", updatedUser.username]);
-      toast.success("Resume uploaded successfully");
+      if (updatedUser?.resumeExtractionApplied) {
+        toast.success("Resume uploaded and profile auto-filled with AI");
+      } else {
+        toast.success("Resume uploaded successfully");
+      }
     },
     onError: (error) => {
       setResumeUploadProgress(0);
@@ -548,6 +565,9 @@ const ProfileHeader = ({ userData, onSave, isOwnProfile }) => {
                     {hasResume
                       ? "Your resume is uploaded. You can view, update, or delete it."
                       : "Upload your resume to make it available in the resume section."}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Resume upload can auto-extract relevant details like Education, Experience, and Skills.
                   </p>
                 </div>
               </div>

@@ -27,6 +27,15 @@ const buildConversationSummary = (message, currentUserId) => {
 	};
 };
 
+const getTimestampValue = (value) => {
+	if (!value) {
+		return Number.NEGATIVE_INFINITY;
+	}
+
+	const timestamp = new Date(value).getTime();
+	return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+};
+
 export const getConversations = async (req, res) => {
 	try {
 		const currentUserId = req.user._id;
@@ -98,14 +107,14 @@ export const getConversations = async (req, res) => {
 					_id: connection._id,
 					user: connection,
 					lastMessage: null,
-					updatedAt: connection.updatedAt || connection.createdAt || new Date(0),
+					updatedAt: null,
 					unreadCount: unreadCountMap.get(connectionId) || 0,
 				});
 			}
 		}
 
 		const conversations = Array.from(conversationsByUserId.values()).sort(
-			(a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+			(a, b) => getTimestampValue(b.updatedAt) - getTimestampValue(a.updatedAt)
 		);
 
 		res.json(conversations);

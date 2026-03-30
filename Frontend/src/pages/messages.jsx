@@ -2,7 +2,6 @@ import Card from "@mui/material/Card";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import React, { useMemo, useRef, useState } from "react";
 import Conversation from "../components/Conversation";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ImageIcon from "@mui/icons-material/Image";
 import SendIcon from "@mui/icons-material/Send";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -395,9 +394,6 @@ const Messages = () => {
                     </p>
                   </div>
                 </div>
-                <button className="p-2 rounded-full hover:bg-gray-100 transition">
-                  <MoreVertIcon className="text-gray-600" />
-                </button>
               </div>
 
               {/* Chat Body */}

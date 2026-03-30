@@ -56,7 +56,11 @@ const Resume = () => {
       }));
       queryClient.invalidateQueries(["authUser"]);
       setResumeUploadProgress(100);
-      toast.success("Resume uploaded successfully");
+      if (updatedUser?.resumeExtractionApplied) {
+        toast.success("Resume uploaded and profile auto-filled with AI");
+      } else {
+        toast.success("Resume uploaded successfully");
+      }
     },
     onError: (error) => {
       setResumeUploadProgress(0);
@@ -136,6 +140,11 @@ const Resume = () => {
               ? "Upload your resume here to display it in your resume section."
               : `${resumeOwner?.name || "This user"} has not uploaded a resume yet.`}
           </p>
+          {isOwnResume && (
+            <p className="text-sm text-gray-500 mb-6">
+              Your resume will be used to extract relevant profile details like Education, Experience, and Skills.
+            </p>
+          )}
 
           {isOwnResume ? (
             <>

@@ -6,6 +6,23 @@ import validator from "validator";
 import { OAuth2Client } from "google-auth-library";
 
 
+const GOOGLE_IMAGE_HOSTS = [
+	"googleusercontent.com",
+	"googleapis.com",
+];
+
+const isGoogleHostedImage = (url = "") => GOOGLE_IMAGE_HOSTS.some((host) => url.includes(host));
+
+const normalizeGoogleProfilePicture = (picture = "") => {
+	if (!picture || typeof picture !== "string") {
+		return "";
+	}
+
+	// Google avatar URLs often include a small default size suffix like `=s96-c`.
+	// Replacing it gives the UI a more reliable, higher-resolution image.
+	return picture.replace(/=s\d+-c$/, "=s400-c");
+};
+
 
 const COOKIE_OPTIONS = {
 	httpOnly: true,
@@ -14,14 +31,45 @@ const COOKIE_OPTIONS = {
 	secure: process.env.NODE_ENV === "production",
 };
 
+const normalizeRole = (role) => (role === "recruiter" ? "recruiter" : "user");
+
+const normalizeCompanyFields = (payload = {}) => ({
+	companyName: String(payload.companyName || "").trim(),
+	companyWebsite: String(payload.companyWebsite || "").trim(),
+	companySize: String(payload.companySize || "").trim(),
+	industry: String(payload.industry || "").trim(),
+	companyLocation: String(payload.companyLocation || "").trim(),
+	companyLogo: String(payload.companyLogo || "").trim(),
+	aboutCompany: String(payload.aboutCompany || "").trim(),
+	HRName: String(payload.HRName || "").trim(),
+});
+
+const hasCompanyInfo = (companyFields) =>
+	Boolean(
+		companyFields.companyName ||
+			companyFields.companyWebsite ||
+			companyFields.companySize ||
+			companyFields.industry ||
+			companyFields.companyLocation ||
+			companyFields.companyLogo ||
+			companyFields.aboutCompany ||
+			companyFields.HRName
+	);
+
 
 export const signup = async (req, res) => {
 	try {
-		let { name, username, email, password } = req.body;
+		let { name, username, email, password, role } = req.body;
+		const normalizedRole = normalizeRole(role);
+		const companyFields = normalizeCompanyFields(req.body);
 
 		// ---------- Basic validation ----------
 		if (!name || !username || !email || !password) {
 			return res.status(400).json({ message: "All fields are required" });
+		}
+
+		if (normalizedRole === "recruiter" && !companyFields.companyName) {
+			return res.status(400).json({ message: "Company name is required for recruiter signup" });
 		}
 
 		email = email.toLowerCase().trim();
@@ -59,6 +107,8 @@ export const signup = async (req, res) => {
 			email,
 			username,
 			password: hashedPassword,
+			role: normalizedRole,
+			...(normalizedRole === "recruiter" ? companyFields : {}),
 		});
 
 		await user.save();
@@ -78,6 +128,7 @@ export const signup = async (req, res) => {
 			name: user.name,
 			email: user.email,
 			username: user.username,
+			role: user.role,
 		});
 
 		// ---------- Welcome email (non-blocking) ----------
@@ -140,7 +191,10 @@ export const getCurrentUser = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
 	try {
-		const { token } = req.body;
+		const { token, profile, role } = req.body;
+		const normalizedRole = normalizeRole(role);
+		const companyFields = normalizeCompanyFields(req.body);
+		const recruiterPayloadProvided = normalizedRole === "recruiter" || hasCompanyInfo(companyFields);
 
 		if (!token) {
 			return res.status(400).json({ message: "Token is required" });
@@ -154,7 +208,10 @@ export const googleAuth = async (req, res) => {
 		});
 
 		const payload = ticket.getPayload();
-		const { email, name, picture } = payload;
+		const email = payload?.email || profile?.email || "";
+		const name = payload?.name || profile?.name || "User";
+		const picture = payload?.picture || profile?.picture || "";
+		const normalizedPicture = normalizeGoogleProfilePicture(picture);
 
 		if (!email) {
 			return res.status(400).json({ message: "Could not retrieve email from Google" });
@@ -168,11 +225,13 @@ export const googleAuth = async (req, res) => {
 			const username = email.split("@")[0] + Math.random().toString(36).substring(7);
 			
 			user = new User({
-				name: name || "User",
+				name,
 				email,
 				username,
 				password: await bcrypt.hash(Math.random().toString(36), 10), // Random password for OAuth users
-				profilePicture: picture || "",
+				profilePicture: normalizedPicture,
+				role: normalizedRole,
+				...(normalizedRole === "recruiter" ? companyFields : {}),
 			});
 
 			await user.save();
@@ -181,6 +240,35 @@ export const googleAuth = async (req, res) => {
 			const profileUrl = `${process.env.CLIENT_URL}/profile/${user.username}`;
 			sendWelcomeEmail(user.email, user.name, profileUrl)
 				.catch(err => console.error("Email failed:", err.message));
+		} else if (
+			normalizedPicture &&
+			(!user.profilePicture || isGoogleHostedImage(user.profilePicture)) &&
+			user.profilePicture !== normalizedPicture
+		) {
+			user.profilePicture = normalizedPicture;
+			if (recruiterPayloadProvided) {
+				user.role = "recruiter";
+				user.companyName = companyFields.companyName || user.companyName;
+				user.companyWebsite = companyFields.companyWebsite || user.companyWebsite;
+				user.companySize = companyFields.companySize || user.companySize;
+				user.industry = companyFields.industry || user.industry;
+				user.companyLocation = companyFields.companyLocation || user.companyLocation;
+				user.companyLogo = companyFields.companyLogo || user.companyLogo || normalizedPicture;
+				user.aboutCompany = companyFields.aboutCompany || user.aboutCompany;
+				user.HRName = companyFields.HRName || user.HRName;
+			}
+			await user.save();
+		} else if (recruiterPayloadProvided) {
+			user.role = "recruiter";
+			user.companyName = companyFields.companyName || user.companyName;
+			user.companyWebsite = companyFields.companyWebsite || user.companyWebsite;
+			user.companySize = companyFields.companySize || user.companySize;
+			user.industry = companyFields.industry || user.industry;
+			user.companyLocation = companyFields.companyLocation || user.companyLocation;
+			user.companyLogo = companyFields.companyLogo || user.companyLogo || normalizedPicture;
+			user.aboutCompany = companyFields.aboutCompany || user.aboutCompany;
+			user.HRName = companyFields.HRName || user.HRName;
+			await user.save();
 		}
 
 		// Create JWT token
@@ -197,6 +285,7 @@ export const googleAuth = async (req, res) => {
 			name: user.name,
 			email: user.email,
 			username: user.username,
+			role: user.role,
 		});
 
 	} catch (error) {
