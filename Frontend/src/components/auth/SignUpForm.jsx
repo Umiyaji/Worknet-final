@@ -14,6 +14,9 @@ const companySizeOptions = [
   "1000+ employees",
 ];
 
+const fieldClassName =
+  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100";
+
 const SignUpForm = ({ defaultRecruiter = false }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -72,57 +75,86 @@ const SignUpForm = ({ defaultRecruiter = false }) => {
 
   return (
     <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-      <input
-        type="text"
-        placeholder="Full name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
-        required
-      />
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
-        required
-      />
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password (6+ characters)"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="input input-bordered w-full p-2 border border-blue-300 rounded-md hover:border-blue-500 focus:outline-none focus:border-red-600"
-        required
-      />
+      <div className="space-y-1.5">
+        <label htmlFor="signup-name" className="text-sm font-medium text-slate-700">
+          Full Name
+        </label>
+        <input
+          id="signup-name"
+          type="text"
+          placeholder="e.g. Priya Sharma"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className={fieldClassName}
+          required
+        />
+      </div>
 
-      <label className="flex items-center gap-2 text-sm text-gray-700">
+      <div className="space-y-1.5">
+        <label htmlFor="signup-username" className="text-sm font-medium text-slate-700">
+          Username
+        </label>
+        <input
+          id="signup-username"
+          type="text"
+          placeholder="Choose a username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className={fieldClassName}
+          required
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="signup-email" className="text-sm font-medium text-slate-700">
+          Email
+        </label>
+        <input
+          id="signup-email"
+          type="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className={fieldClassName}
+          required
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="signup-password" className="text-sm font-medium text-slate-700">
+          Password
+        </label>
+        <input
+          id="signup-password"
+          type="password"
+          placeholder="6+ characters"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className={fieldClassName}
+          required
+        />
+      </div>
+
+      <label className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
         <input
           type="checkbox"
           checked={registerAsRecruiter}
           onChange={(e) => setRegisterAsRecruiter(e.target.checked)}
-          className="h-4 w-4"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
         />
-        Register as Recruiter / Company
+        <span>Register as Recruiter / Company</span>
       </label>
 
       {registerAsRecruiter && (
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 space-y-2">
+        <div className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+          <h3 className="text-sm font-semibold text-emerald-900">Company Details</h3>
+
           <input
             type="text"
             placeholder="Company Name"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
-            className="w-full p-2 border border-blue-300 rounded-md"
+            className={fieldClassName}
             required
           />
           <input
@@ -130,12 +162,12 @@ const SignUpForm = ({ defaultRecruiter = false }) => {
             placeholder="Company Website"
             value={companyWebsite}
             onChange={(e) => setCompanyWebsite(e.target.value)}
-            className="w-full p-2 border border-blue-300 rounded-md"
+            className={fieldClassName}
           />
           <select
             value={companySize}
             onChange={(e) => setCompanySize(e.target.value)}
-            className="w-full p-2 border border-blue-300 rounded-md bg-white"
+            className={fieldClassName}
           >
             {companySizeOptions.map((size) => (
               <option key={size} value={size}>
@@ -148,21 +180,21 @@ const SignUpForm = ({ defaultRecruiter = false }) => {
             placeholder="Industry"
             value={industry}
             onChange={(e) => setIndustry(e.target.value)}
-            className="w-full p-2 border border-blue-300 rounded-md"
+            className={fieldClassName}
           />
           <input
             type="text"
             placeholder="Company Location"
             value={companyLocation}
             onChange={(e) => setCompanyLocation(e.target.value)}
-            className="w-full p-2 border border-blue-300 rounded-md"
+            className={fieldClassName}
           />
           <input
             type="text"
             placeholder="HR Name (optional)"
             value={HRName}
             onChange={(e) => setHRName(e.target.value)}
-            className="w-full p-2 border border-blue-300 rounded-md"
+            className={fieldClassName}
           />
         </div>
       )}
@@ -170,41 +202,44 @@ const SignUpForm = ({ defaultRecruiter = false }) => {
       <button
         type="submit"
         disabled={isPending}
-        className="btn btn-primary w-full cursor-pointer border rounded-md p-2 bg-primary text-white hover:bg-primary-dark font-semibold flex justify-center items-center gap-2"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:from-emerald-500 hover:to-teal-500 disabled:cursor-not-allowed disabled:opacity-70"
       >
         {isPending ? (
           <>
             <Loader className="size-5 animate-spin" />
-            <span>Signing Up...</span>
+            <span>Signing up...</span>
           </>
         ) : (
           "Agree & Join"
         )}
       </button>
 
-      <div className="flex items-center gap-3">
-        <div className="flex-1 border-t border-gray-300"></div>
-        <span className="text-sm text-gray-500">Or</span>
-        <div className="flex-1 border-t border-gray-300"></div>
+      <div className="my-1 flex items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Or continue with</span>
+        <div className="h-px flex-1 bg-slate-200" />
       </div>
 
-      <GoogleLoginComp
-        authRole={registerAsRecruiter ? "recruiter" : "user"}
-        extraPayload={
-          registerAsRecruiter
-            ? {
-                companyName,
-                companyWebsite,
-                companySize,
-                industry,
-                companyLocation,
-                HRName,
-              }
-            : {}
-        }
-        onSuccessNavigateTo={registerAsRecruiter ? "/recruiter/dashboard" : "/"}
-      />
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+        <GoogleLoginComp
+          authRole={registerAsRecruiter ? "recruiter" : "user"}
+          extraPayload={
+            registerAsRecruiter
+              ? {
+                  companyName,
+                  companyWebsite,
+                  companySize,
+                  industry,
+                  companyLocation,
+                  HRName,
+                }
+              : {}
+          }
+          onSuccessNavigateTo={registerAsRecruiter ? "/recruiter/dashboard" : "/"}
+        />
+      </div>
     </form>
   );
 };
+
 export default SignUpForm;
